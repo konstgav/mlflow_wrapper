@@ -3,12 +3,12 @@
 
 ## Шаги по тестированию работоспособности модели
 
-1. Установка `mlflow`
+1. Установка `mlflow` и других пакетов
 ```
-pip install mlflow==1.25.1
+pip install mlflow==1.25.1 psycopg2 protobuf==3.20.* boto3
 ```
 
-2. Развертывание postgres для сохраннения метаданных mlflow
+2. Развертывание postgres для сохранения метаданных mlflow
 ```
 docker run -d --rm \
 	--name psql-for-ml \
@@ -18,40 +18,61 @@ docker run -d --rm \
 	-e PGDATA=/var/lib/postgresql/data/pgdata \
 	-v ./psql-data:/var/lib/postgresql/data \
 	-p 5432:5432 \
-	postgres
-
+	postgres:15
 ```
 
-2. Запуск локального `mlflow`-сервера.
 ```
-mlflow server --backend-store-uri postgresql://mlflow:mlflow@127.0.0.1:5432/mlflow
-  --host 0.0.0.0
+psql --host 127.0.0.1 -U mlflow -d mlflow -p 5432
+```
+
+3. Запускаем хранилище артефактов MinIO
+```
+docker run -d --rm \
+  --name minio-container \
+  -p 9000:9000 \
+  -p 9001:9001 \
+  -v ./minio-data:/data \
+  minio/minio server /data --console-address ":9001"
+```
+
+4. Запуск локального `mlflow`-сервера.
+```
+export MLFLOW_S3_ENDPOINT_URL=http://127.0.0.1:9000
+export MLFLOW_S3_IGNORE_TLS=true
+export BACKEND_URI=postgresql://mlflow:mlflow@127.0.0.1:5432/mlflow
+export ARTIFACT_ROOT=s3://mlflow/mlartifacts  
+export AWS_ACCESS_KEY_ID=minioadmin
+export AWS_SECRET_ACCESS_KEY=minioadmin
+
+mlflow server \
+  --backend-store-uri ${BACKEND_URI} \
   --artifacts-destination ${ARTIFACT_ROOT} \
   --serve-artifacts \
+  --host 0.0.0.0
 ```
 Веб-интерфейс доступен по адресу [http://127.0.0.1:5000](http://127.0.0.1:5000)
 
-3. Обучение и логирование модели 
+5. Обучение и логирование модели 
 ```
 python3 wrapper_test.py
 ```
 
-4. В терминале, где будет запускаться модель, указать путь к `mlflow`-серверу
+6. В терминале, где будет запускаться модель, указать путь к `mlflow`-серверу
 ```
 export MLFLOW_TRACKING_URI=http://127.0.0.1:5000
 ```
 
-5. Запуск модели (serving), путь к модели нужно заменить (2 минуты).
+7. Запуск модели (serving), путь к модели нужно заменить (2 минуты).
 ```
 mlflow models serve -m "./mlruns/0/7fe77989175146369b941d5feaea1cc1/artifacts/model" -p 1234
 ```
 
-6. Проверка работоспособности модели
+8. Проверка работоспособности модели
 ```
 curl -X POST -H "Content-Type:application/json" --data '{"dataframe_split": {"columns":["fixed acidity", "volatile acidity", "citric acid", "residual sugar", "chlorides", "free sulfur dioxide", "total sulfur dioxide", "density", "pH", "sulphates", "alcohol"],"data":[[6.2, 0.66, 0.48, 1.2, 0.029, 29, 75, 0.98, 3.33, 0.39, 12.8]]}}' http://127.0.0.1:1234/invocations
 ```
 
-7. Появилось новое `conda`-окружение
+Появилось новое `conda`-окружение
 ```
 conda env list
 ```

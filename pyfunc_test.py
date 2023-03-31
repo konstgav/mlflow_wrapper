@@ -79,7 +79,7 @@ def trian_and_save_model(model_name, alpha=0.5, l1_ratio=0.5):
 
     return sklearn_model
 
-def load_model(model_name: str = "model_name", stage: str = "Production"):
+def load_model(model_name, stage):
     """
     Loads the trained ElasticNet (sklearn) model from the model registry and returns
     it as mlflow.pyfunc.PyFuncModel to be used to do the predictions.
@@ -122,9 +122,13 @@ def test_prediction(model):
     result = model.predict(df)
     return result
 
-
 if __name__ == '__main__':
+    print('1. Train and save ElasticNetWineModel')
     trian_and_save_model(model_name='ElasticNetWineModel')
-    loaded_model = load_model()
+    
+    print('2. Load model with mlflow.pyfunc.load_model()')
+    loaded_model = load_model(model_name='ElasticNetWineModel', stage='Production')
+    
+    print('3. Make prediction with model.predict()')
     result = test_prediction(loaded_model)
-    print(result)
+    print('Result: ', result)
