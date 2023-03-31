@@ -57,5 +57,34 @@ pip install virtualenv
 sudo apt-get install libbz2-dev
 ```
 
+## Механизм сохранения модели `python_function`
+
+`Mlflow` может сохранять различные типы ML-моделей, обученных с помощью пакетов sklearn, pytorch, xgboost и др. Если модель нестандартная (состоит из нескольких стандартных моделей или требует пред-, пост-обработки данных), то можно воспользоваться базовым механизмом `python_function` для сохранения моделей, любую `mlflow`-модель можно загрузить как `python_function`-модель.
+
+Модуль `mlflow.pyfunc` определяет универсальный формат файловой системы (структура дерева файлов в каталоге модели), согласно которому должны сохраняться все модели и обеспечивает свойство переносимости модели (создание собственного окружения на любой виртуальной машине).
+
+Любая **загружаемая** с помощью функции `mlflow.pyfunc.load_model` модель является экземпляром класса `mlflow.pyfunc.PyFuncModel`, который служит оболочкой для реализации модели и метаданных модели, обеспечивает вызов метода predict() со следующей сигнатурой:
+```
+predict(
+    model_input: [pandas.DataFrame, numpy.ndarray, scipy.sparse.(csc.csc_matrix | csr.csr_matrix),
+    List[Any], Dict[str, Any]]) -> [numpy.ndarray | pandas.(Series |DataFrame) | List]
+```
+
+Таким образом, на вход метода `predict` может поступать либо датафрейм pandas, либо массив numpy, либо матрица scipy, либо список любых объектов, либо словарь любых объектов со строковыми ключами.
+
+При разработке **кастомной** `mlflow`-модели, нужно реализовать интерфейс базового класса `mlflow.pyfunc.PythonModel`:
+ - `load_context(context)` - загружает артефакты из указанного контекста `PythonModelContext`, которые могут использоваться при predict. При загрузке модели MLflow с помощью `load_model()` этот метод вызывается сразу после создания `PythonModel`.
+ - `predict(context, model_input)` - возвращает предсказание модели в виде формате, совместимом с pyfunc. Сигнатура аналогична методу  `mlflow.pyfunc.PyFuncModel.predict()`, без переменной context.
+
+## Что требуется сделать разработчику для создания кастомной модели в `mlflow`:
+
+1. Подготовить код модели.
+2. Реализовать наследника класса `mlflow.pyfunc.PythonModel`, описывающего бизнес-логику предсказания модели после сериализации.
+3. С помощью метода `mlflow.pyfunc.log_model` сохранить модель в `mlflow`, передав в качестве аргументов:
+    * artifact_path
+    * python_model - класс модели
+    * code_path
+    * artifacts=artifacts
+
 ## Refs
-1. [https://medium.com/@pennyqxr/how-save-and-load-fasttext-model-in-mlflow-format-37e4d6017bf0]()
+1. [https://medium.com/@pennyqxr/how-save-and-load-fasttext-model-in-mlflow-format-37e4d6017bf0](https://medium.com/@pennyqxr/how-save-and-load-fasttext-model-in-mlflow-format-37e4d6017bf0)
