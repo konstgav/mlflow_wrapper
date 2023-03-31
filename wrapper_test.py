@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
         tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
         print(tracking_url_type_store)
-        mlflow.pyfunc.log_model(lr, "model")
+        mlflow.sklearn.log_model(lr, "model")
         exit()
 
         # Model registry does not work with file store
