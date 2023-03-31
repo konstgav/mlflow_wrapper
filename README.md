@@ -8,9 +8,26 @@
 pip install mlflow==1.25.1
 ```
 
+2. Развертывание postgres для сохраннения метаданных mlflow
+```
+docker run -d --rm \
+	--name psql-for-ml \
+	-e POSTGRES_PASSWORD=mlflow \
+	-e POSTGRES_USER=mlflow \
+	-e POSTGRES_DB=mlflow \
+	-e PGDATA=/var/lib/postgresql/data/pgdata \
+	-v ./psql-data:/var/lib/postgresql/data \
+	-p 5432:5432 \
+	postgres
+
+```
+
 2. Запуск локального `mlflow`-сервера.
 ```
-mlflow server
+mlflow server --backend-store-uri postgresql://mlflow:mlflow@127.0.0.1:5432/mlflow
+  --host 0.0.0.0
+  --artifacts-destination ${ARTIFACT_ROOT} \
+  --serve-artifacts \
 ```
 Веб-интерфейс доступен по адресу [http://127.0.0.1:5000](http://127.0.0.1:5000)
 
