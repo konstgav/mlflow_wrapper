@@ -64,7 +64,7 @@ export MLFLOW_TRACKING_URI=http://127.0.0.1:5000
 
 7. Запуск модели (serving), путь к модели нужно заменить (2 минуты).
 ```
-mlflow models serve -m "./mlruns/0/7fe77989175146369b941d5feaea1cc1/artifacts/model" -p 1234
+mlflow models serve -m "models:/ElasticNetWineModel/Production" -p 1234
 ```
 
 8. Проверка работоспособности модели
